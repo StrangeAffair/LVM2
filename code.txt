@@ -1,0 +1,22 @@
+function main():
+begin
+	const ([Int64] -> (Int64)) 0
+	store ((Int64)[Size])  0
+	
+	const ([Int64] -> (Int64)) 20
+start:
+	load  ([Size]  -> (Int64)) 0
+	const ([Int64] -> (Int64)) 2
+	jge   ([Size]) finish;
+	
+	const ([Int64] -> (Int64)) 15
+	add   ((Int64, Int64) -> (Int64))
+	
+	load  ([Size]  -> (Int64)) 0
+	inc   ((Int64) -> (Int64))
+	store ((Int64)[Size])  0
+	
+	jump  ([Size]) start;
+finish:
+end
+
