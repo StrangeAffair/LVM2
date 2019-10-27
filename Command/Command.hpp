@@ -17,8 +17,6 @@ template<class T>
 using il = std::initializer_list<T>;
 
 #include "../Object/Object.hpp"
-#include "../Pointer/Pointer.hpp"
-#include "../Function/Function.hpp"
 #include "../Array/Array.hpp"
 
 struct Command;
@@ -36,7 +34,7 @@ struct Function
     Function() = default;
 
     Function(const Function& other) = delete;
-    Function(Function&& other);
+    Function(Function&& other) = delete;
 
     union FunctionTypes
     {

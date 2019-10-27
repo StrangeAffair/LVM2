@@ -65,19 +65,6 @@ std::string ReadFile(const char* name)
     return text;
 }
 
-class A
-{
-    int a;
-    int b;
-public:
-    const A* ctor(A*);
-    const A* dtor(A*);
-public:
-    virtual void foo();
-public:
-    static const A* copy(A*, const A*);
-};
-
 int main()
 {
     Lexer lex(ReadFile("code.txt"));
