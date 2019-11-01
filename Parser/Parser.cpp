@@ -18,18 +18,18 @@
 */
 
 //we need function name as info
-void Parser::import(string name, Builtins::il input, Builtins::il output, Builtins::il args)
+void Parser::import(const char* name, Builtins::il input, Builtins::il output, Builtins::il args)
 {
     Function* fn = Builtins::find(name, input, output, args);
     if (fn == nullptr)
     {
-        error = "Could not find builtin function" + name;
+        error = string("Could not find builtin function") + name;
         return;
     }
     else
     {
         this->output.insert(fn);
-        fprintf(stdout, "imported %s\n", fn->name.c_str());
+        fprintf(stdout, "imported %s\n", fn->GetName());
     }
 }
 
@@ -232,13 +232,14 @@ void Parser::ImportAll()
     import("jump", {}, {}, {ObjectType::Size});
 }
 
-FunctionsTable* Parser::Parse()
+
+int Parser::Parse()
 {
     ImportAll();
     if (error != "")
     {
         fprintf(stderr, "%s", error.c_str());
-        return nullptr;
+        return 1;
     }
 
 
@@ -246,20 +247,20 @@ FunctionsTable* Parser::Parse()
     Function    temp;
     while(position < length)
     {
-        FunctionCtor(temp);
+        Function::ctor(temp);
 
         retval = ParseFunction(&temp);
         if (CheckError(retval))
         {
             PrintError(retval);
-            return nullptr;
+            return 2;
         }
         output.insert(&temp);
 
-        FunctionDtor(temp);
+        Function::dtor(temp);
     }
 
-    return &output;
+    return 0;
 }
 
 auto Parser::ParseFunction(Function* fn) -> const char*
@@ -279,9 +280,8 @@ auto Parser::ParseFunction(Function* fn) -> const char*
     if (retval != nullptr)
         return retval;
 
-    string name = temp->GetData();
-    fn->name = name;
-    fn->type = 1;
+    fn->SetName(temp->GetData().c_str());
+    fn->base.type = FunctionBase::LFunction_t;
     Next();
 
     retval = Match(TokenType::LParen);
@@ -307,7 +307,7 @@ auto Parser::ParseFunction(Function* fn) -> const char*
         return retval;
 
     if (fn != nullptr)
-        retval = ParseCode(&fn->data.Lfn);
+        retval = ParseCode(&fn->base.data.Lfn);
     else
         retval = ParseCode(nullptr);
     if (CheckError(retval))
@@ -338,6 +338,85 @@ bool Parser::IsMetka() const
     else
         return false;
 }
+
+/*
+bool Parser::HasOpcode()
+{
+    const char*  retval = nullptr;
+    const Token* temp   = nullptr;
+
+    retval = Compare(TokenType::ID);
+    if (retval != nullptr)
+        return retval;
+
+    retval = Get(0, temp);
+    if (retval != nullptr)
+        return retval;
+
+    string name = temp->GetData();
+
+    if (name == "jump")
+        return true;
+    if (name == "jge")
+        return true;
+    return false;
+}
+
+bool Parser::OpcodeJump()
+{
+    {
+        Function temp;
+        Function::ctor(temp);
+
+        ReadSignature(temp.signature);
+
+        if (output.find(temp.signature) == nullptr)
+            return "could not find function name";
+
+        cmd.fn = output.find(temp.signature);
+
+        Function::dtor(temp);
+    }
+}
+
+bool Parser::OpcodeJGE()
+{
+    {
+        Function temp;
+        Function::ctor(temp);
+
+        ReadSignature(temp.signature);
+
+        if (output.find(temp.signature) == nullptr)
+            return "could not find function name";
+
+        cmd.fn = output.find(temp.signature);
+
+        Function::dtor(temp);
+    }
+}
+
+void Parser::ConstructOpcode()
+{
+    const char*  retval = nullptr;
+    const Token* temp   = nullptr;
+
+    retval = Compare(TokenType::ID);
+    if (retval != nullptr)
+        return retval;
+
+    retval = Get(0, temp);
+    if (retval != nullptr)
+        return retval;
+
+    string name = temp->GetData();
+
+    if (name == "jump")
+        OpcodeJump();
+    if (name == "jge")
+        OpcodeJGE();
+}
+*/
 
 auto Parser::ParseCode(LFunction* code) -> const char*
 {
@@ -421,12 +500,12 @@ auto Parser::ParseCode(LFunction* code) -> const char*
 
     for(Command* it = commands.start; it != commands.finish; ++it)
         it->Print();
-    code->start  = const_cast<const Command*>(commands.start);
-    code->finish = const_cast<const Command*>(commands.finish);
+    code->start  = commands.start;
+    code->finish = commands.finish;
     return nullptr;
 }
 
-auto Parser::ParseArgn(Command* cmd, size_t n, const map<string, size_t>& MetkaList) -> const char*
+auto Parser::ParseArgn(Array<Object>* args, size_t n, const map<string, size_t>& MetkaList) -> const char*
 {
     const char*  retval = nullptr;
     const Token* temp   = nullptr;
@@ -441,26 +520,26 @@ auto Parser::ParseArgn(Command* cmd, size_t n, const map<string, size_t>& MetkaL
     {
         case TokenType::Number:
         {
-            if (cmd != nullptr)
+            if (args != nullptr)
             {
                 const char* str   = temp->GetData().c_str();
                 int64_t     value = 0;
                 sscanf(str, "%" PRId64, &value);
 
-                Object::set(*(cmd->args.start + n), value);
+                Object::set(*(args->start + n), value);
             }
             Next();
             break;
         }
         case TokenType::ID:
         {
-            if (cmd != nullptr)
+            if (args != nullptr)
             {
                 string name = temp->GetData();
                 if (MetkaList.find(name) == MetkaList.end())
                     return "could not find metka in MetkaList";
                 int64_t value = MetkaList.find(name)->second;
-                Object::set(*(cmd->args.start + n), value);
+                Object::set(*(args->start + n), value);
             }
             Skip(2);
             break;
@@ -471,7 +550,7 @@ auto Parser::ParseArgn(Command* cmd, size_t n, const map<string, size_t>& MetkaL
     return nullptr;
 }
 
-size_t Parser::ParseArgs(Command* cmd, const map<string, size_t>& MetkaList)
+size_t Parser::ParseArgs(Array<Object>* args, const map<string, size_t>& MetkaList)
 {
     const char*  retval = nullptr;
     const Token* temp   = nullptr;
@@ -490,7 +569,7 @@ size_t Parser::ParseArgs(Command* cmd, const map<string, size_t>& MetkaList)
             return count;
         if ((temp->GetType() == TokenType::ID) && ((temp + 1)->GetType() != TokenType::Semicolon))
             return count;
-        ParseArgn(cmd, count++, MetkaList);
+        ParseArgn(args, count++, MetkaList);
     }
 }
 
@@ -705,10 +784,22 @@ size_t Parser::ParseList_ObjectType(Array<ObjectType>* dest)
     return count;
 }
 
-auto Parser::ParseArumentString(Function* fn) -> const char*
+auto Parser::ReadSignature(FunctionSignature& signature) -> const char*
 {
     const char*  retval = nullptr;
     const Token* temp   = nullptr;
+
+    retval = Compare(TokenType::ID);
+    if (retval != nullptr)
+        return retval;
+
+    retval = Get(0, temp);
+    if (retval != nullptr)
+        return retval;
+
+    string name = temp->GetData();
+    signature.name = StringCopy(name.c_str());
+    Next();
 
     retval = Match(TokenType::LParen);
     if (retval != nullptr)
@@ -717,7 +808,7 @@ auto Parser::ParseArumentString(Function* fn) -> const char*
     retval = Compare(TokenType::LParen);
     if (retval == nullptr)
     {
-        ParseList_ObjectType(&fn->input);
+        ParseList_ObjectType(&signature.ilist);
         if (CheckError(nullptr))
             return "internal error";
     }
@@ -725,7 +816,7 @@ auto Parser::ParseArumentString(Function* fn) -> const char*
     retval = Compare(TokenType::LBracket);
     if (retval == nullptr)
     {
-        ParseList_ObjectType(&fn->args);
+        ParseList_ObjectType(&signature.alist);
         if (CheckError(nullptr))
             return "internal error";
     }
@@ -738,7 +829,7 @@ auto Parser::ParseArumentString(Function* fn) -> const char*
         retval = Compare(TokenType::LParen);
         if (retval == nullptr)
         {
-            ParseList_ObjectType(&fn->output);
+            ParseList_ObjectType(&signature.olist);
             if (CheckError(nullptr))
                 return "internal error";
         }
@@ -747,6 +838,7 @@ auto Parser::ParseArumentString(Function* fn) -> const char*
     retval = Match(TokenType::RParen);
     if (retval != nullptr)
         return retval;
+
     return nullptr;
 }
 
@@ -781,31 +873,19 @@ auto Parser::Command1(const map<string, size_t>& MetkaList) -> const char*
     const char*  retval = nullptr;
     const Token* temp   = nullptr;
 
-    retval = Compare(TokenType::ID);
-    if (retval != nullptr)
-        return "incorrect TokenType of comman name";
-    //Cheker and setter
-
-    retval = Get(0, temp);
-    if (retval != nullptr)
-        return retval;
-    string name = temp->GetData();
-    Next();
-
     size_t argc = 0;
     {
         Function temp;
-        FunctionCtor(temp);
+        Function::ctor(temp);
 
-        temp.name = name;
-        ParseArumentString(&temp);
+        ReadSignature(temp.signature);
 
-        if (output.find(temp.name, temp.input, temp.output, temp.args) == nullptr)
+        if (output.find(temp.signature) == nullptr)
             return "could not find function name";
 
-        argc = temp.args.size();
+        argc = temp.signature.alist.size();
 
-        FunctionDtor(temp);
+        Function::dtor(temp);
     }
 
     size_t save  = position;
@@ -826,31 +906,23 @@ auto Parser::Command2(Command& cmd, const map<string, size_t>& MetkaList) -> con
     const Token* temp   = nullptr;
     //Maker (all checks should be done)
 
-    retval = Get(0, temp);
-    if (retval != nullptr)
-        return retval;
-
-    string name = temp->GetData();
-    Next();
-
     {
         Function temp;
-        FunctionCtor(temp);
+        Function::ctor(temp);
 
-        temp.name = name;
-        ParseArumentString(&temp);
+        ReadSignature(temp.signature);
 
-        if (output.find(temp.name, temp.input, temp.output, temp.args) == nullptr)
+        if (output.find(temp.signature) == nullptr)
             return "could not find function name";
 
-        cmd.fn = output.find(temp.name, temp.input, temp.output, temp.args);
+        cmd.fn = output.find(temp.signature);
 
-        FunctionDtor(temp);
+        Function::dtor(temp);
     }
 
-    ArrayCtor(cmd.args, cmd.fn->args.size());
+    ArrayCtor(cmd.args, cmd.fn->signature.alist.size());
 
-    ParseArgs(&cmd, MetkaList);
+    ParseArgs(&cmd.args, MetkaList);
     if (CheckError(nullptr))
         return "internal error";
     return nullptr;

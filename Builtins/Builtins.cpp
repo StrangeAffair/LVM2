@@ -11,16 +11,6 @@ namespace{
         }
     }
 
-    /*
-    void CmdPrint(state* st, size_t argc, Object* args)
-    {
-        fprintf(stdout, "Data Stack:\n");
-        fprintf(stdout, "\tsize = %d\n", st->dsp);
-        for(auto value : st->dstack)
-            fprintf(stdout, "\t%" PRId64 "\n", Object::get<int64_t>(value));
-    }
-    */
-
     void CmdInc(state* st, size_t argc, Object* args)
     {
         if (argc != 0)
@@ -103,6 +93,7 @@ namespace{
         --st->dsp;
     }
 
+    /*
     void CmdJGE(state* st, size_t argc, Object* args)
     {
         if (argc != 1)
@@ -124,7 +115,9 @@ namespace{
         Object::clear(st->dstack[st->dsp - 1]);
         st->dsp -= 2;
     }
+    */
 
+    /*
     void CmdJump(state* st, size_t argc, Object* args)
     {
         if (argc != 1)
@@ -136,9 +129,8 @@ namespace{
         last.current = last.start + Object::get<int64_t>(args[0]);
         st->flags |= 1;
     }
-
+    */
 };
-
 
 namespace Builtins{
     FunctionsTable builtins;
@@ -153,13 +145,14 @@ namespace Builtins{
         builtins.insert("add", CmdAdd, {ObjectType::Int64, ObjectType::Int64}, {ObjectType::Int64}, {});
         builtins.insert("inc", CmdInc, {ObjectType::Int64}, {ObjectType::Int64}, {});
 
-        builtins.insert("jge",  CmdJGE , {}, {}, {ObjectType::Size});
-        builtins.insert("jump", CmdJump, {}, {}, {ObjectType::Size});
+        //opcode functions
+        builtins.insert("jge",  0x35, {}, {}, {ObjectType::Size});
+        builtins.insert("jump", 0x30, {}, {}, {ObjectType::Size});
 
         builtins.insert("error", RaiseError, {}, {ObjectType::Int64}, {});
     }
 
-    Function* find(string name, il input, il output, il args)
+    Function* find(const char* name, il input, il output, il args)
     {
         static bool flag = true;
         if (flag)

@@ -8,22 +8,24 @@
 #include "Command/Command.hpp"
 #include "Builtins/Builtins.hpp"
 
+/*
 void PrintError(state* st)
 {
     for(size_t i = 0; i < st->csp; ++i)
     {
-        const string& name     = st->cstack[i].command->fn->name;
+        const string& name     = FunctionGetName(st->cstack[i].command->fn);
         const size_t  position = st->cstack[i].current - st->cstack[i].start;
 
-        if (st->cstack[i].command->fn->type == 0)
+        if (st->cstack[i].command->fn->base.type == 0)
             fprintf(stderr, "in builtin function \"%s\":\n"    , name.c_str());
-        if (st->cstack[i].command->fn->type == 1)
+        if (st->cstack[i].command->fn->base.type == 1)
             fprintf(stderr, "in function \"%s\", command %d:\n", name.c_str(), position);
     }
     fprintf(stderr, "error code = %d\n", st->error);
 }
+*/
 
-void run(FunctionsTable* table, string name, Object* argv = nullptr)
+void run(const FunctionsTable* table, string name, Object* argv = nullptr)
 {
     if (table == nullptr)
         return;
@@ -35,13 +37,13 @@ void run(FunctionsTable* table, string name, Object* argv = nullptr)
     st.dsp = 0;
 
     Command temp;
-    temp.fn   = st.table->find(name);
+    temp.fn   = st.table->find(name.c_str());
 
     if (temp.fn != nullptr)
         call(&temp, &st);
     if (st.error)
     {
-        PrintError(&st);
+        fprintf(stderr, "st.error = %d", st.error);
     }
 }
 
@@ -75,10 +77,15 @@ int main()
 
     fprintf(stdout, "sizeof(Command) = %d\n", sizeof(Command));
 
-    Parser parser(tokens);
-    FunctionsTable* table = parser.Parse();
+    FunctionsTable table;
 
+    Parser parser(tokens, table);
+    parser.Parse();
+
+
+    for(Function* it = table.start; it != table.current; ++it)
+        PrintFunction(*it);
     //table->Print();
-    run(table, "main");
+    run(&table, "main");
     return 0;
 }

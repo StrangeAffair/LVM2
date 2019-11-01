@@ -36,11 +36,11 @@ struct Function
 class Parser
 {
 public:
-    void import(string name, Builtins::il input, Builtins::il output, Builtins::il args);
+    void import(const char* name, Builtins::il input, Builtins::il output, Builtins::il args);
     void ImportAll();
 private:
+    FunctionsTable& output;
     vector<Token>   input;
-    FunctionsTable  output;
     size_t position;
     size_t length;
 private:
@@ -65,21 +65,23 @@ private:
     auto ParseCommand (Command*   cmd, const map<string, size_t>& MetkaList) -> const char*;
 /* not checked */
 private:
-    auto ParseArgn(Command* cmd, size_t n, const map<string, size_t>& MetkaList) -> const char*;
+    auto ParseArgn(Array<Object>* args, size_t n, const map<string, size_t>& MetkaList) -> const char*;
 private:
-    auto ParseArumentString(Function* fn) -> const char*;
+    auto ReadSignature(FunctionSignature& fn) -> const char*;
+    //auto ParseArumentString(Function* fn) -> const char*;
 private:
     auto Command1(const map<string, size_t>& MetkaList) -> const char*;
     auto Command2(Command&, const map<string, size_t>& Metkalist) -> const char*;
 private:
     size_t ParseList_ObjectType(Array<ObjectType>* dest);
 private:
-    size_t ParseArgs(Command* cmd, const map<string, size_t>& MetkaList);
+    size_t ParseArgs(Array<Object>* args, const map<string, size_t>& MetkaList);
 
 private:
     bool IsMetka() const;
 public:
-    Parser(std::vector<Token> input)
+    Parser(std::vector<Token> input, FunctionsTable& __output):
+        output(__output)
     {
         this->input    = input;
         this->position = 0;
@@ -87,7 +89,7 @@ public:
 
         error = "";
     }
-    FunctionsTable* Parse();
+    int Parse();
 };
 
 #endif // _PARSER_HPP_

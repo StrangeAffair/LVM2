@@ -3,7 +3,6 @@
 
 #include "../Command/Command.hpp"
 #include <initializer_list>
-#include <string>
 
 namespace Builtins
 {
@@ -11,7 +10,7 @@ namespace Builtins
     using std::string;
 
     extern FunctionsTable builtins;
-    extern Function* find(string name, il input, il output, il args);
+    extern Function* find(const char* name, il input, il output, il args);
 };
 
 #endif // _Builtins_

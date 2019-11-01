@@ -55,6 +55,12 @@ auto ArrayDtor(Array<T>& a) -> size_t
 template<class T>
 auto ArrayFromIL(Array<T>& a, std::initializer_list<T> il) -> size_t
 {
+    if (il.size() == 0)
+    {
+        ArrayCtor(a);
+        return 0;
+    }
+
     if (ArrayCtor(a, il.size()) != 0)
         return 1;
 
@@ -78,7 +84,7 @@ auto ArrayFromIL(Array<T>& a, std::initializer_list<T> il) -> size_t
 }
 
 template<class T>
-auto ArrayCopy(Array<T>& dest, Array<T>& src) -> size_t
+auto ArrayCopy(Array<T>& dest, const Array<T>& src) -> size_t
 {
     if (ArrayCtor(dest, src.size()) != 0)
         return 1;
@@ -101,6 +107,7 @@ auto ArrayCopy(Array<T>& dest, Array<T>& src) -> size_t
         return 0;
     }
 }
+
 
 #endif // _Array_
 
